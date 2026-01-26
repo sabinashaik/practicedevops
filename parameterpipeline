@@ -1,0 +1,57 @@
+pipeline {
+    agent any
+
+    parameters {
+        choice(
+            name: 'ENV',
+            choices: ['dev', 'test', 'prod'],
+            description: 'Select environment'
+        )
+
+        string(
+            name: 'APP_NAME',
+            defaultValue: 'order-service',
+            description: 'Application name'
+        )
+    }
+
+    stages {
+
+        stage('Show Workspace') {
+            steps {
+                echo "Workspace path: ${env.WORKSPACE}"
+                sh 'ls -l'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                dir('build') {
+                    sh '''
+                        echo "Building ${APP_NAME} for ${ENV}"
+                        echo "artifact-${ENV}.jar" > ${APP_NAME}.jar
+                        ls -l
+                    '''
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir('reports') {
+                    sh '''
+                        echo "Testing ${APP_NAME}"
+                        echo "Tests passed for ${ENV}" > test-report.txt
+                        ls -l
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo "Deploying ${APP_NAME} to ${ENV} environment"
+            }
+        }
+    }
+}
