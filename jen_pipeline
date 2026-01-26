@@ -5,18 +5,20 @@ pipeline {
         stage('Clone') {
             steps {
                 echo 'Cloning GitHub repository...'
+                checkout scm
             }
         }
 
         stage('Build') {
             steps {
-                echo 'Building Java application...'
+                echo 'Compiling Java application...'
+               sh 'javac HelloWorld.java'
             }
         }
-
-        stage('Test') {
+         stage('Run Java Program') {
             steps {
-                echo 'Testing application...'
+                echo 'Running Java application...'
+                sh 'java HelloWorld'
             }
         }
 
