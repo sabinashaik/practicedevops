@@ -1,31 +1,40 @@
 pipeline {
     agent any
 
+    environment {
+        JAVA_HOME = "/opt/jdk21"          // Change this to your actual JDK path
+        PATH = "${JAVA_HOME}/bin:${env.PATH}"
+    }
+
     stages {
-        stage('Clone') {
+        stage('Clone Repository') {
             steps {
                 echo 'Cloning GitHub repository...'
                 checkout scm
             }
         }
 
-        stage('Build') {
+        stage('Build Java Program') {
             steps {
-                echo 'Compiling Java application...'
-               sh 'javac HelloWorld.java'
-            }
-        }
-         stage('Run Java Program') {
-            steps {
-                echo 'Running Java application...'
-                sh 'java HelloWorld'
+                echo 'Compiling HelloWorld.java...'
+                sh 'javac HelloWorld.java'
             }
         }
 
-        stage('Deploy') {
+        stage('Run Java Program') {
             steps {
-                echo 'Deploying application...'
+                echo 'Running HelloWorld.java...'
+                sh 'java HelloWorld'
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline executed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Check the logs.'
         }
     }
 }
