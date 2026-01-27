@@ -12,7 +12,7 @@ pipeline {
             steps {
                 echo "Building branch: ${env.BRANCH_NAME}"
                 checkout scm 
-                    ## checkout to git
+                    // checkout to git
             }
         }
 
