@@ -2,56 +2,63 @@ pipeline {
     agent any
 
     parameters {
-        choice(
-            name: 'ENV',
-            choices: ['dev', 'test', 'prod'],
-            description: 'Select environment'
+        string(
+            name: 'GIT_REPO_URL',
+            defaultValue: 'https://github.com/username/repo.git',
+            description: 'Git repository URL'
         )
 
         string(
-            name: 'APP_NAME',
-            defaultValue: 'order-service',
-            description: 'Application name'
+            name: 'GIT_BRANCH',
+            defaultValue: 'main',
+            description: 'Git branch to checkout'
         )
+
+        string(
+            name: 'JAVA_FILE',
+            defaultValue: 'HelloWorld.java',
+            description: 'Java source file name'
+        )
+    }
+
+    environment {
+        JAVA_HOME = "/opt/jdk21"
+        PATH = "${JAVA_HOME}/bin:${env.PATH}"
     }
 
     stages {
 
-        stage('Show Workspace') {
+        stage('Clone Repository') {
             steps {
-                echo "Workspace path: ${env.WORKSPACE}"
-                sh 'ls -l'
+                echo "Cloning repository: ${params.GIT_REPO_URL}"
+                git branch: "${params.GIT_BRANCH}", url: "${params.GIT_REPO_URL}"
             }
         }
 
-        stage('Build') {
+        stage('Build Java Program') {
             steps {
-                dir('build') {
-                    sh '''
-                        echo "Building ${APP_NAME} for ${ENV}"
-                        echo "artifact-${ENV}.jar" > ${APP_NAME}.jar
-                        ls -l
-                    '''
+                echo "Compiling ${params.JAVA_FILE}"
+                sh "javac ${params.JAVA_FILE}"
+            }
+        }
+
+        stage('Run Java Program') {
+            steps {
+                script {
+                    def className = params.JAVA_FILE.replace('.java', '')
+                    echo "Running ${className}"
+                    sh "java ${className}"
                 }
             }
         }
+    }
 
-        stage('Test') {
-            steps {
-                dir('reports') {
-                    sh '''
-                        echo "Testing ${APP_NAME}"
-                        echo "Tests passed for ${ENV}" > test-report.txt
-                        ls -l
-                    '''
-                }
-            }
+    post {
+        success {
+            echo "✅ Pipeline executed successfully!"
         }
-
-        stage('Deploy') {
-            steps {
-                echo "Deploying ${APP_NAME} to ${ENV} environment"
-            }
+        failure {
+            echo "❌ Pipeline failed. Please check logs."
         }
     }
 }
