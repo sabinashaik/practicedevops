@@ -6,7 +6,7 @@ pipeline {
         // String parameters
         string(
             name: 'GIT_REPO_URL',
-            defaultValue: 'https://github.com/yourname/java-jenkins-demo.git',
+            defaultValue: 'https://github.com/sabinashaik/practicedevops.git',
             description: 'Git repository URL'
         )
 
