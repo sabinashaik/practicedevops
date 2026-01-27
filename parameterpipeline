@@ -2,22 +2,58 @@ pipeline {
     agent any
 
     parameters {
+
+        // String parameters
         string(
             name: 'GIT_REPO_URL',
-            defaultValue: 'https://github.com/username/repo.git',
+            defaultValue: 'https://github.com/yourname/java-jenkins-demo.git',
             description: 'Git repository URL'
         )
 
         string(
             name: 'GIT_BRANCH',
             defaultValue: 'main',
-            description: 'Git branch to checkout'
+            description: 'Git branch name'
         )
 
         string(
             name: 'JAVA_FILE',
             defaultValue: 'HelloWorld.java',
             description: 'Java source file name'
+        )
+
+        // Choice parameter
+        choice(
+            name: 'ENV',
+            choices: ['dev', 'qa', 'prod'],
+            description: 'Select environment'
+        )
+
+        // Boolean parameters
+        booleanParam(
+            name: 'CLEAN_WORKSPACE',
+            defaultValue: true,
+            description: 'Clean workspace before build'
+        )
+
+        booleanParam(
+            name: 'RUN_TESTS',
+            defaultValue: true,
+            description: 'Run tests or not'
+        )
+
+        // Multiline string (Text parameter in UI)
+        text(
+            name: 'RELEASE_NOTES',
+            defaultValue: '',
+            description: 'Release notes / comments'
+        )
+
+        // Credentials parameter
+        credentials(
+            name: 'GIT_CREDENTIALS',
+            credentialType: 'com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl',
+            description: 'Git credentials'
         )
     }
 
@@ -28,37 +64,63 @@ pipeline {
 
     stages {
 
-        stage('Clone Repository') {
+        stage('Clean Workspace') {
+            when {
+                expression { params.CLEAN_WORKSPACE }
+            }
             steps {
-                echo "Cloning repository: ${params.GIT_REPO_URL}"
-                git branch: "${params.GIT_BRANCH}", url: "${params.GIT_REPO_URL}"
+                cleanWs()
             }
         }
 
-        stage('Build Java Program') {
+        stage('Checkout Code') {
             steps {
-                echo "Compiling ${params.JAVA_FILE}"
+                git branch: params.GIT_BRANCH,
+                    url: params.GIT_REPO_URL,
+                    credentialsId: params.GIT_CREDENTIALS
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo "Building for ENV: ${params.ENV}"
                 sh "javac ${params.JAVA_FILE}"
             }
         }
 
-        stage('Run Java Program') {
+        stage('Test') {
+            when {
+                expression { params.RUN_TESTS }
+            }
+            steps {
+                echo "Running tests..."
+                sh "echo Tests executed successfully"
+            }
+        }
+
+        stage('Run Application') {
             steps {
                 script {
                     def className = params.JAVA_FILE.replace('.java', '')
-                    echo "Running ${className}"
                     sh "java ${className}"
                 }
+            }
+        }
+
+        stage('Release Notes') {
+            steps {
+                echo "Release Notes:"
+                echo "${params.RELEASE_NOTES}"
             }
         }
     }
 
     post {
         success {
-            echo "✅ Pipeline executed successfully!"
+            echo "✅ Build SUCCESS for ${params.ENV}"
         }
         failure {
-            echo "❌ Pipeline failed. Please check logs."
+            echo "❌ Build FAILED"
         }
     }
 }
