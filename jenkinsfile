@@ -1,0 +1,99 @@
+pipeline {
+    agent any
+
+    tools {
+        jdk 'JDK21'
+        maven 'Maven3'
+    }
+
+    environment {
+        SONARQUBE_SERVER = 'SonarQube-Server'
+        NEXUS_REPO_URL   = 'http://52.20.230.98/:8081/repository/maven-releases/'
+        TOMCAT_WEBAPPS  = '/opt/tomcat/webapps'
+        APP_NAME        = 'project1'
+    }
+
+    stages {
+
+        stage('Checkout Stable Code') {
+            steps {
+                echo 'Cloning stable branch from GitHub...'
+                git branch: 'main',
+                    url: 'https://github.com/sabinashaik/practicedevops.git'
+            }
+        }
+
+        stage('Build & Unit Test') {
+            steps {
+                echo 'Running Maven build and tests...'
+                sh 'mvn clean test package'
+            }
+        }
+
+        stage('SonarQube Code Analysis') {
+            steps {
+                echo 'Running SonarQube analysis...'
+                withSonarQubeEnv("${SONARQUBE_SERVER}") {
+                    sh '''
+                    mvn sonar:sonar \
+                    -Dsonar.projectKey=project1 \
+                    -Dsonar.projectName=project1 \
+                    -Dsonar.java.binaries=target
+                    '''
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                echo 'Waiting for SonarQube Quality Gate...'
+                timeout(time: 2, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Upload Artifact to Nexus') {
+            steps {
+                echo 'Uploading artifact to Nexus...'
+                sh 'mvn deploy -DskipTests=true'
+            }
+        }
+
+        stage('Deploy to Tomcat') {
+            steps {
+                echo 'Deploying WAR to Tomcat...'
+                sh '''
+                cp target/*.war ${TOMCAT_WEBAPPS}/${APP_NAME}.war
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Project-1 CI/CD pipeline executed successfully!'
+        }
+
+        failure {
+            echo ' Pipeline failed! Sending email...'
+            mail to: 'sabinashaik228@gmail.com',
+                 subject: "Jenkins FAILED: ${env.JOB_NAME}",
+                 body: """
+                 Hello Sabina,
+
+                 The Jenkins pipeline has FAILED.
+
+                 Job Name : ${env.JOB_NAME}
+                 Build No : ${env.BUILD_NUMBER}
+                 Status   : FAILED
+
+                 Logs:
+                 ${env.BUILD_URL}
+
+                 Regards,
+                 Jenkins
+                 """
+        }
+    }
+}
